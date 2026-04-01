@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspNonce}; script-src 'nonce-${cspNonce}';" />
+  <title>JK Organization Tasks</title>
+  <link rel="stylesheet" href="${styleUri}" />
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-brand">
+        <span class="header-icon">✅</span>
+        <h1 class="header-title">JK Organization</h1>
+      </div>
+      <nav class="tabs" role="tablist">
+        <button class="tab tab--active" role="tab" aria-selected="true" data-tab="today" id="tab-today">
+          Tarefas do Dia
+        </button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="history" id="tab-history">
+          Histórico
+        </button>
+      </nav>
+    </header>
+
+    <!-- Tarefas do Dia -->
+    <section class="panel panel--active" id="panel-today" role="tabpanel" aria-labelledby="tab-today">
+      <div class="section-header">
+        <div class="date-display" id="today-date"></div>
+        <button class="btn btn--primary" id="add-task-btn" title="Adicionar nova tarefa">
+          <span>+</span> Adicionar Tarefa
+        </button>
+      </div>
+
+      <!-- Inline task input -->
+      <div class="add-task-form hidden" id="add-task-form">
+        <div class="input-row">
+          <input
+            type="text"
+            class="task-input"
+            id="new-task-input"
+            placeholder="Descreva sua tarefa..."
+            maxlength="200"
+            autocomplete="off"
+          />
+          <button class="btn btn--confirm" id="confirm-add-btn">Adicionar</button>
+          <button class="btn btn--ghost" id="cancel-add-btn">Cancelar</button>
+        </div>
+      </div>
+
+      <!-- Task list -->
+      <ul class="task-list" id="task-list" aria-label="Lista de tarefas do dia">
+        <!-- Tasks rendered by JS -->
+      </ul>
+
+      <div class="empty-state hidden" id="empty-state">
+        <span class="empty-icon">📋</span>
+        <p>Nenhuma tarefa para hoje.</p>
+        <p class="empty-hint">Clique em <strong>+ Adicionar Tarefa</strong> para começar!</p>
+      </div>
+
+      <!-- Footer action -->
+      <div class="day-footer">
+        <div class="progress-bar-container" id="progress-container">
+          <div class="progress-label" id="progress-label"></div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+        </div>
+        <button class="btn btn--close-day" id="close-day-btn">
+          Encerrar Dia 🌙
+        </button>
+      </div>
+    </section>
+
+    <!-- Histórico -->
+    <section class="panel" id="panel-history" role="tabpanel" aria-labelledby="tab-history">
+      <div class="section-header">
+        <h2 class="section-title">Histórico de Dias</h2>
+      </div>
+      <div class="history-list" id="history-list">
+        <!-- History rendered by JS -->
+      </div>
+      <div class="empty-state hidden" id="history-empty-state">
+        <span class="empty-icon">🗓️</span>
+        <p>Nenhum dia encerrado ainda.</p>
+        <p class="empty-hint">Encerre o dia para ver o histórico aqui.</p>
+      </div>
+    </section>
+
+    <!-- Toast notification -->
+    <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script nonce="${cspNonce}" src="${scriptUri}"></script>
+</body>
+</html>
