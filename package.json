@@ -2,17 +2,15 @@
   "name": "jk-organization",
   "displayName": "JK Organization Tasks",
   "description": "Gerenciador de tarefas para sprints diárias dentro do VSCode",
-  "version": "0.1.0",
-  "publisher": "jk-organization",
+  "version": "0.1.1",
+  "publisher": "lucasnarvais",
   "engines": {
     "vscode": "^1.85.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onCommand:jkOrganization.openPanel"
-  ],
+  "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -36,7 +34,8 @@
         {
           "id": "jkOrganizationTasks",
           "name": "Tarefas do Dia",
-          "type": "tree"
+          "type": "tree",
+          "icon": "$(checklist)"
         }
       ]
     },
@@ -45,22 +44,28 @@
         {
           "command": "jkOrganization.openPanel",
           "when": "view == jkOrganizationTasks",
-          "group": "navigation"
+          "group": "navigation",
+          "icon": "$(checklist)"
         }
       ]
     }
   },
+  "keywords": ["tasks", "productivity", "sprint", "todo", "organizer"],
+  "license": "MIT",
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src --ext ts",
+    "package": "vsce package",
+    "publish": "vsce publish"
   },
   "devDependencies": {
     "@types/vscode": "^1.85.0",
     "@types/node": "^20.x",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
+    "@vscode/vsce": "^3.0.0",
     "eslint": "^8.56.0",
     "typescript": "^5.3.0"
   }

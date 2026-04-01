@@ -1,0 +1,21 @@
+# Exclude from the published VSIX — keeps only what's needed at runtime
+
+# VSCode dev config
+.vscode/**
+
+# TypeScript sources (compiled to out/)
+src/**/*.ts
+
+# Dependencies only used at build/dev time
+node_modules/**
+
+# Build artifacts to skip
+out/**/*.js.map
+**/*.vsix
+
+# Dev tooling configs
+tsconfig.json
+.eslintrc*
+.eslintignore
+.gitignore
+.gitattributes

@@ -497,6 +497,85 @@ body {
   text-decoration: line-through;
 }
 
+/* ---- Notes section ------------------------------------- */
+.notes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.notes-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+.notes-textarea {
+  background-color: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  border-radius: var(--radius);
+  color: var(--vscode-input-foreground);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  min-height: 80px;
+  outline: none;
+  padding: 10px 12px;
+  resize: vertical;
+  transition: border-color var(--transition);
+}
+
+.notes-textarea:focus {
+  border-color: var(--vscode-focusBorder);
+}
+
+.notes-textarea::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+
+.notes-status {
+  font-size: 0.75rem;
+  color: var(--vscode-descriptionForeground);
+  min-height: 1em;
+}
+
+/* ---- Backlog actions ----------------------------------- */
+.backlog-task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.backlog-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.btn--small {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+}
+
+/* ---- Small checkbox for history edit ------------------- */
+.task-checkbox--small {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.task-checkbox--small:checked::after {
+  height: 5px;
+  width: 8px;
+  left: 2px;
+  top: 2px;
+}
+
 /* ---- Toast -------------------------------------------- */
 .toast {
   align-items: center;
@@ -527,4 +606,251 @@ body {
 /* ---- Utilities ---------------------------------------- */
 .hidden {
   display: none !important;
+}
+
+/* ---- Project cards ------------------------------------- */
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.project-card {
+  background-color: var(--vscode-editor-inactiveSelectionBackground, var(--vscode-sideBar-background));
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: background-color var(--transition), border-color var(--transition);
+}
+
+.project-card:hover {
+  background-color: var(--vscode-list-hoverBackground);
+  border-color: var(--vscode-focusBorder);
+}
+
+.project-card--done {
+  opacity: 0.6;
+}
+
+.project-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.project-status-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.project-card-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  word-break: break-word;
+}
+
+.project-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: var(--vscode-descriptionForeground);
+}
+
+.sprint-badge {
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.project-card-progress,
+.project-card-links {
+  font-size: 0.78rem;
+}
+
+/* ---- Project detail view ------------------------------- */
+.detail-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.detail-back-btn {
+  font-size: 0.85rem;
+}
+
+.detail-status-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.detail-status-badge--active {
+  background-color: var(--vscode-testing-iconPassed, #4caf50);
+  color: #fff;
+}
+
+.detail-status-badge--done {
+  background-color: var(--vscode-descriptionForeground);
+  color: var(--vscode-editor-background);
+}
+
+.detail-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--vscode-foreground);
+}
+
+.detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+.detail-input {
+  background-color: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  border-radius: var(--radius);
+  color: var(--vscode-input-foreground);
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  padding: 8px 12px;
+  transition: border-color var(--transition);
+}
+
+.detail-input:focus {
+  border-color: var(--vscode-focusBorder);
+}
+
+.detail-input::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ---- Links -------------------------------------------- */
+.link-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+}
+
+.link-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background-color: var(--vscode-editor-inactiveSelectionBackground, var(--vscode-sideBar-background));
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: var(--radius);
+}
+
+.link-anchor {
+  flex: 1;
+  color: var(--vscode-textLink-foreground);
+  font-size: 0.85rem;
+  text-decoration: none;
+  word-break: break-all;
+  cursor: pointer;
+}
+
+.link-anchor:hover {
+  text-decoration: underline;
+}
+
+.link-label-input {
+  min-width: 80px;
+  max-width: 140px;
+  flex: 0 1 140px;
+}
+
+.link-url-input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.add-link-form .input-row {
+  flex-wrap: nowrap;
+}
+
+/* ---- Detail actions ------------------------------------ */
+.detail-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.btn--complete {
+  background-color: var(--vscode-testing-iconPassed, #4caf50);
+  color: #fff;
+  padding: 9px 20px;
+  font-size: 0.9rem;
+}
+
+.btn--complete:hover {
+  opacity: 0.88;
+}
+
+.btn--reopen {
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  padding: 9px 20px;
+  font-size: 0.9rem;
+}
+
+.btn--reopen:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.btn--danger {
+  background-color: var(--vscode-testing-iconFailed, #e53935);
+  color: #fff;
+  padding: 9px 20px;
+  font-size: 0.9rem;
+}
+
+.btn--danger:hover {
+  opacity: 0.88;
+}
+
+/* ---- History notes block ------------------------------ */
+.history-notes {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background-color: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  border-radius: var(--radius);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.82rem;
+  color: var(--vscode-descriptionForeground);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.stat-badge--notes {
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
 }

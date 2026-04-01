@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspNonce}; script-src 'nonce-${cspNonce}';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource}; script-src 'nonce-${cspNonce}';" />
   <title>JK Organization Tasks</title>
   <link rel="stylesheet" href="${styleUri}" />
 </head>
@@ -18,6 +18,12 @@
       <nav class="tabs" role="tablist">
         <button class="tab tab--active" role="tab" aria-selected="true" data-tab="today" id="tab-today">
           Tarefas do Dia
+        </button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="backlog" id="tab-backlog">
+          Pendentes
+        </button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="projects" id="tab-projects">
+          Projetos
         </button>
         <button class="tab" role="tab" aria-selected="false" data-tab="history" id="tab-history">
           Histórico
@@ -61,6 +67,18 @@
         <p class="empty-hint">Clique em <strong>+ Adicionar Tarefa</strong> para começar!</p>
       </div>
 
+      <!-- Notes area -->
+      <div class="notes-section">
+        <label class="notes-label" for="notes-textarea">📝 Anotações</label>
+        <textarea
+          class="notes-textarea"
+          id="notes-textarea"
+          placeholder="Escreva suas anotações aqui... (suporta texto livre)"
+          rows="5"
+        ></textarea>
+        <div class="notes-status" id="notes-status"></div>
+      </div>
+
       <!-- Footer action -->
       <div class="day-footer">
         <div class="progress-bar-container" id="progress-container">
@@ -72,6 +90,131 @@
         <button class="btn btn--close-day" id="close-day-btn">
           Encerrar Dia 🌙
         </button>
+      </div>
+    </section>
+
+    <!-- Tarefas Pendentes (Backlog) -->
+    <section class="panel" id="panel-backlog" role="tabpanel" aria-labelledby="tab-backlog">
+      <div class="section-header">
+        <h2 class="section-title">Tarefas Pendentes</h2>
+      </div>
+      <div class="backlog-list" id="backlog-list"></div>
+      <div class="empty-state hidden" id="backlog-empty-state">
+        <span class="empty-icon">🎉</span>
+        <p>Nenhuma tarefa pendente!</p>
+        <p class="empty-hint">Todas as tarefas foram concluídas. Continue assim!</p>
+      </div>
+    </section>
+
+    <!-- Projetos (List) -->
+    <section class="panel" id="panel-projects" role="tabpanel" aria-labelledby="tab-projects">
+      <div class="section-header">
+        <h2 class="section-title">Projetos</h2>
+        <button class="btn btn--primary" id="add-project-btn" title="Novo projeto">
+          <span>+</span> Novo Projeto
+        </button>
+      </div>
+
+      <div class="add-task-form hidden" id="add-project-form">
+        <div class="input-row">
+          <input
+            type="text"
+            class="task-input"
+            id="new-project-input"
+            placeholder="Nome do projeto..."
+            maxlength="200"
+            autocomplete="off"
+          />
+          <button class="btn btn--confirm" id="confirm-project-btn">Criar</button>
+          <button class="btn btn--ghost" id="cancel-project-btn">Cancelar</button>
+        </div>
+      </div>
+
+      <div class="project-list" id="project-list"></div>
+      <div class="empty-state hidden" id="projects-empty-state">
+        <span class="empty-icon">📁</span>
+        <p>Nenhum projeto criado.</p>
+        <p class="empty-hint">Clique em <strong>+ Novo Projeto</strong> para começar!</p>
+      </div>
+    </section>
+
+    <!-- Project Detail (replaces projects list when viewing a project) -->
+    <section class="panel" id="panel-project-detail" role="tabpanel">
+      <div class="detail-top-bar">
+        <button class="btn btn--ghost detail-back-btn" id="detail-back-btn">← Voltar</button>
+        <span class="detail-status-badge" id="detail-status-badge"></span>
+      </div>
+
+      <h2 class="detail-title" id="detail-title"></h2>
+
+      <!-- Sprint -->
+      <div class="detail-field">
+        <label class="detail-label" for="detail-sprint">🏃 Sprint</label>
+        <input type="text" class="detail-input" id="detail-sprint" placeholder="Ex: Sprint 12" autocomplete="off" />
+      </div>
+
+      <!-- Subtasks -->
+      <div class="detail-section">
+        <label class="detail-label">📋 Subtarefas</label>
+        <div class="add-task-form" id="add-subtask-form">
+          <div class="input-row">
+            <input
+              type="text"
+              class="task-input"
+              id="new-subtask-input"
+              placeholder="Nova subtarefa..."
+              maxlength="200"
+              autocomplete="off"
+            />
+            <button class="btn btn--confirm" id="confirm-subtask-btn">Adicionar</button>
+          </div>
+        </div>
+        <ul class="task-list" id="subtask-list"></ul>
+      </div>
+
+      <!-- Notes -->
+      <div class="detail-section">
+        <label class="detail-label" for="detail-notes">📝 Anotações do Projeto</label>
+        <textarea
+          class="notes-textarea"
+          id="detail-notes"
+          placeholder="Anotações sobre o projeto..."
+          rows="5"
+        ></textarea>
+        <div class="notes-status" id="detail-notes-status"></div>
+      </div>
+
+      <!-- Links -->
+      <div class="detail-section">
+        <label class="detail-label">🔗 Links Úteis</label>
+        <div class="add-link-form" id="add-link-form">
+          <div class="input-row">
+            <input
+              type="text"
+              class="task-input link-label-input"
+              id="new-link-label"
+              placeholder="Descrição (opcional)"
+              maxlength="100"
+              autocomplete="off"
+            />
+            <input
+              type="url"
+              class="task-input link-url-input"
+              id="new-link-url"
+              placeholder="https://..."
+              maxlength="500"
+              autocomplete="off"
+            />
+            <button class="btn btn--confirm" id="confirm-link-btn">Adicionar</button>
+          </div>
+        </div>
+        <ul class="link-list" id="link-list"></ul>
+      </div>
+
+      <!-- Complete / Delete -->
+      <div class="detail-actions">
+        <button class="btn btn--complete" id="complete-project-btn">✅ Marcar como Concluída</button>
+        <button class="btn btn--danger" id="delete-project-btn">🗑️ Excluir Projeto</button>
       </div>
     </section>
 
