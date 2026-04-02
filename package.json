@@ -2,7 +2,7 @@
   "name": "jk-organization",
   "displayName": "JK Organization Tasks",
   "description": "Gerenciador de tarefas para sprints diárias dentro do VSCode",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "lucasnarvais",
   "engines": {
     "vscode": "^1.85.0"
@@ -57,7 +57,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
-    "package": "vsce package",
+    "generate-package-to-publish": "vsce package",
     "publish": "vsce publish"
   },
   "devDependencies": {

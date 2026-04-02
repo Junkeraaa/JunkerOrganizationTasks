@@ -1,6 +1,6 @@
 # JK Organization Tasks
 
-Extensão do VSCode para gerenciar tarefas de sprints diárias. Adicione tarefas ao longo do dia, marque-as como concluídas e encerre o dia salvando tudo no histórico — sem sair do editor.
+Extensão do VSCode para gerenciamento de tarefas. Adicione tarefas ao longo do dia, marque-as como concluídas e encerre o dia salvando tudo no histórico — sem sair do editor.
 
 ---
 
@@ -14,25 +14,6 @@ Extensão do VSCode para gerenciar tarefas de sprints diárias. Adicione tarefas
 - **Tema automático** — segue o tema dark/light do VSCode via variáveis CSS nativas
 
 ---
-
-## 🚀 Como rodar localmente
-
-### Pré-requisitos
-
-- [Node.js](https://nodejs.org/) 18+
-- [VSCode](https://code.visualstudio.com/)
-
-### Passos
-
-```bash
-# 1. Instale as dependências
-npm install
-
-# 2. Compile o TypeScript (modo watch — recompila ao salvar)
-npm run watch
-```
-
-Depois, pressione **F5** no VSCode para abrir a janela de desenvolvimento da extensão (**Extension Development Host**).
 
 Na nova janela aberta, use `Ctrl+Shift+P` → **JK Organization: Abrir Painel**.
 
@@ -56,21 +37,6 @@ src/
         ├── style.css           ← estilos dark/light com variáveis VSCode
         └── main.js             ← lógica frontend (postMessage API)
 ```
-
----
-
-## 📦 Gerar o pacote `.vsix`
-
-```bash
-# Instale o vsce globalmente (se ainda não tiver)
-npm install -g @vscode/vsce
-
-# Gere o pacote
-vsce package
-```
-
-O arquivo `.vsix` gerado pode ser instalado manualmente via:
-`Extensões` → `...` → **Instalar pelo VSIX...**
 
 ---
 
