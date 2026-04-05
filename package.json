@@ -2,8 +2,12 @@
   "name": "jk-organization",
   "displayName": "JK Organization Tasks",
   "description": "Gerenciador de tarefas para sprints diárias dentro do VSCode",
-  "version": "0.1.2",
+  "version": "0.3.0",
   "publisher": "lucasnarvais",
+  "repository": {
+    "type": "git"
+  },
+  "changelog": "CHANGELOG.md",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -33,7 +37,7 @@
       "jkOrganization": [
         {
           "id": "jkOrganizationTasks",
-          "name": "Tarefas do Dia",
+          "name": "Tarefas",
           "type": "tree",
           "icon": "$(checklist)"
         }
@@ -48,7 +52,14 @@
           "icon": "$(checklist)"
         }
       ]
-    }
+    },
+    "keybindings": [
+      {
+        "command": "jkOrganization.openPanel",
+        "key": "ctrl+shift+j",
+        "mac": "cmd+shift+j"
+      }
+    ]
   },
   "keywords": ["tasks", "productivity", "sprint", "todo", "organizer"],
   "license": "MIT",

@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { StorageService } from '../services/storageService';
 import { TaskTreeProvider } from '../providers/taskTreeProvider';
-import { Task, Project, ProjectLink } from '../types/task';
+import { Task, Project, ProjectLink, ProjectEvidence, TaskCategory } from '../types/task';
 
 export class PanelManager {
   private static _instance: PanelManager | undefined;
@@ -60,6 +60,10 @@ export class PanelManager {
     this._panel.onDidDispose(() => this._dispose(), null, this._disposables);
   }
 
+  private _refreshTree(): void {
+    this._treeProvider.refresh(this._storage.getTasks(), this._storage.buildCategoryList());
+  }
+
   private _registerMessageHandler(): void {
     this._panel.webview.onDidReceiveMessage(
       (message: WebviewMessage) => {
@@ -69,7 +73,7 @@ export class PanelManager {
               this._sendState();
               break;
 
-            // ── Daily tasks ──────────────────────────────
+            // ── Tasks (unified, with categories) ─────────
             case 'addTask': {
               const tasks = this._storage.getTasks();
               const newTask: Task = {
@@ -77,10 +81,11 @@ export class PanelManager {
                 title: message.title.trim(),
                 status: 'pending',
                 createdAt: new Date().toISOString(),
+                categoryId: message.categoryId || 'daily',
               };
               tasks.push(newTask);
               this._storage.saveTasks(tasks);
-              this._treeProvider.refresh(tasks);
+              this._refreshTree();
               this._sendState();
               break;
             }
@@ -92,7 +97,7 @@ export class PanelManager {
                   : t
               );
               this._storage.saveTasks(tasks);
-              this._treeProvider.refresh(tasks);
+              this._refreshTree();
               this._sendState();
               break;
             }
@@ -100,7 +105,17 @@ export class PanelManager {
             case 'removeTask': {
               const tasks = this._storage.getTasks().filter((t) => t.id !== message.id);
               this._storage.saveTasks(tasks);
-              this._treeProvider.refresh(tasks);
+              this._refreshTree();
+              this._sendState();
+              break;
+            }
+
+            case 'moveTask': {
+              const tasks = this._storage.getTasks().map((t) =>
+                t.id === message.id ? { ...t, categoryId: message.categoryId } : t
+              );
+              this._storage.saveTasks(tasks);
+              this._refreshTree();
               this._sendState();
               break;
             }
@@ -111,11 +126,48 @@ export class PanelManager {
             }
 
             case 'closeDay': {
-              const tasks = this._storage.getTasks();
-              this._storage.closeDay(tasks);
-              this._treeProvider.refresh([]);
+              this._storage.closeDay();
+              this._refreshTree();
               this._sendState();
               this._panel.webview.postMessage({ command: 'dayClosedSuccess' });
+              break;
+            }
+
+            case 'closeDayLastBusinessDay': {
+              const lastBizDay = this._storage.getLastBusinessDay();
+              this._storage.closeDay(lastBizDay);
+              this._refreshTree();
+              this._sendState();
+              this._panel.webview.postMessage({ command: 'dayClosedSuccess', date: lastBizDay });
+              break;
+            }
+
+            // ── Categories ───────────────────────────────
+            case 'addCategory': {
+              const categories = this._storage.getCategories();
+              const cat: TaskCategory = {
+                id: Date.now().toString(),
+                name: message.name.trim(),
+                type: 'custom',
+                createdAt: new Date().toISOString(),
+              };
+              categories.push(cat);
+              this._storage.saveCategories(categories);
+              this._refreshTree();
+              this._sendState();
+              break;
+            }
+
+            case 'removeCategory': {
+              const categories = this._storage.getCategories().filter((c) => c.id !== message.id);
+              this._storage.saveCategories(categories);
+              // Move tasks from deleted category to daily
+              const tasks = this._storage.getTasks().map((t) =>
+                t.categoryId === message.id ? { ...t, categoryId: 'daily' } : t
+              );
+              this._storage.saveTasks(tasks);
+              this._refreshTree();
+              this._sendState();
               break;
             }
 
@@ -134,9 +186,9 @@ export class PanelManager {
               this._storage.saveBacklog(backlog.filter((e) => e.tasks.length > 0));
               if (foundTask) {
                 const tasks = this._storage.getTasks();
-                tasks.push({ ...foundTask, status: 'done', createdAt: new Date().toISOString() });
+                tasks.push({ ...foundTask, status: 'done', createdAt: new Date().toISOString(), categoryId: 'daily' });
                 this._storage.saveTasks(tasks);
-                this._treeProvider.refresh(tasks);
+                this._refreshTree();
               }
               this._sendState();
               break;
@@ -190,10 +242,12 @@ export class PanelManager {
                 notes: '',
                 subtasks: [],
                 links: [],
+                evidences: [],
                 createdAt: new Date().toISOString(),
               };
               projects.push(project);
               this._storage.saveProjects(projects);
+              this._refreshTree();
               this._sendState();
               break;
             }
@@ -205,8 +259,11 @@ export class PanelManager {
                 const p = projects[idx];
                 if (message.field === 'sprint') { p.sprint = message.value; }
                 else if (message.field === 'notes') { p.notes = message.value; }
-                else if (message.field === 'status') { p.status = message.value as Project['status']; }
+                else if (message.field === 'status') {
+                  p.status = message.value as Project['status'];
+                }
                 this._storage.saveProjects(projects);
+                this._refreshTree();
               }
               this._sendState();
               break;
@@ -215,47 +272,48 @@ export class PanelManager {
             case 'removeProject': {
               const projects = this._storage.getProjects().filter((p) => p.id !== message.id);
               this._storage.saveProjects(projects);
+              // Move project tasks to daily
+              const tasks = this._storage.getTasks().map((t) =>
+                t.categoryId === message.id ? { ...t, categoryId: 'daily' } : t
+              );
+              this._storage.saveTasks(tasks);
+              this._refreshTree();
               this._sendState();
               break;
             }
 
+            // ── Project subtasks (now unified with tasks) ──
             case 'addProjectSubtask': {
-              const projects = this._storage.getProjects();
-              const project = projects.find((p) => p.id === message.projectId);
-              if (project) {
-                project.subtasks.push({
-                  id: Date.now().toString(),
-                  title: message.title.trim(),
-                  status: 'pending',
-                  createdAt: new Date().toISOString(),
-                });
-                this._storage.saveProjects(projects);
-              }
+              const tasks = this._storage.getTasks();
+              tasks.push({
+                id: Date.now().toString(),
+                title: message.title.trim(),
+                status: 'pending',
+                createdAt: new Date().toISOString(),
+                categoryId: message.projectId,
+              });
+              this._storage.saveTasks(tasks);
+              this._refreshTree();
               this._sendState();
               break;
             }
 
             case 'toggleProjectSubtask': {
-              const projects = this._storage.getProjects();
-              for (const p of projects) {
-                const st = p.subtasks.find((t) => t.id === message.id);
-                if (st) {
-                  st.status = st.status === 'done' ? 'pending' : 'done';
-                  break;
-                }
-              }
-              this._storage.saveProjects(projects);
+              const tasks = this._storage.getTasks().map((t) =>
+                t.id === message.id
+                  ? { ...t, status: (t.status === 'done' ? 'pending' : 'done') as Task['status'] }
+                  : t
+              );
+              this._storage.saveTasks(tasks);
+              this._refreshTree();
               this._sendState();
               break;
             }
 
             case 'removeProjectSubtask': {
-              const projects = this._storage.getProjects();
-              for (const p of projects) {
-                const idx = p.subtasks.findIndex((t) => t.id === message.id);
-                if (idx !== -1) { p.subtasks.splice(idx, 1); break; }
-              }
-              this._storage.saveProjects(projects);
+              const tasks = this._storage.getTasks().filter((t) => t.id !== message.id);
+              this._storage.saveTasks(tasks);
+              this._refreshTree();
               this._sendState();
               break;
             }
@@ -286,6 +344,56 @@ export class PanelManager {
               this._sendState();
               break;
             }
+
+            case 'addProjectEvidence': {
+              const projects = this._storage.getProjects();
+              const project = projects.find((p) => p.id === message.projectId);
+              if (project) {
+                if (!project.evidences) { project.evidences = []; }
+                const evidence: ProjectEvidence = {
+                  id: Date.now().toString(),
+                  label: message.label.trim() || 'Evidência',
+                  dataUrl: message.dataUrl,
+                  createdAt: new Date().toISOString(),
+                };
+                project.evidences.push(evidence);
+                this._storage.saveProjects(projects);
+              }
+              this._sendState();
+              break;
+            }
+
+            case 'removeProjectEvidence': {
+              const projects = this._storage.getProjects();
+              for (const p of projects) {
+                if (!p.evidences) { continue; }
+                const idx = p.evidences.findIndex((e) => e.id === message.id);
+                if (idx !== -1) { p.evidences.splice(idx, 1); break; }
+              }
+              this._storage.saveProjects(projects);
+              this._sendState();
+              break;
+            }
+
+            case 'downloadEvidence': {
+              const evLabel = (message as any).label || 'evidence';
+              const evDataUrl = (message as any).dataUrl as string;
+              const b64 = evDataUrl.split(',')[1];
+              if (!b64) { break; }
+              const buf = Buffer.from(b64, 'base64');
+              const safeName = evLabel.replace(/[<>:"\/\\|?*]/g, '_');
+              vscode.window.showSaveDialog({
+                defaultUri: vscode.Uri.file(safeName + '.png'),
+                filters: { Images: ['png', 'jpg', 'jpeg', 'gif', 'webp'] },
+              }).then((uri) => {
+                if (uri) {
+                  vscode.workspace.fs.writeFile(uri, buf).then(() => {
+                    this._panel.webview.postMessage({ command: 'evidenceDownloaded' });
+                  });
+                }
+              });
+              break;
+            }
           }
         } catch (error) {
           const msg = error instanceof Error ? error.message : String(error);
@@ -301,6 +409,7 @@ export class PanelManager {
     this._panel.webview.postMessage({
       command: 'setState',
       tasks: this._storage.getTasks(),
+      categories: this._storage.buildCategoryList(),
       history: this._storage.getHistory(),
       notes: this._storage.getNotes(),
       backlog: this._storage.getBacklog(),
@@ -343,11 +452,15 @@ function generateNonce(): string {
 
 type WebviewMessage =
   | { command: 'getState' }
-  | { command: 'addTask'; title: string }
+  | { command: 'addTask'; title: string; categoryId?: string }
   | { command: 'toggleTask'; id: string }
   | { command: 'removeTask'; id: string }
+  | { command: 'moveTask'; id: string; categoryId: string }
   | { command: 'saveNotes'; notes: string }
   | { command: 'closeDay' }
+  | { command: 'closeDayLastBusinessDay' }
+  | { command: 'addCategory'; name: string }
+  | { command: 'removeCategory'; id: string }
   | { command: 'completeBacklogTask'; id: string }
   | { command: 'removeBacklogTask'; id: string }
   | { command: 'toggleHistoryTask'; id: string }
@@ -359,4 +472,7 @@ type WebviewMessage =
   | { command: 'toggleProjectSubtask'; id: string }
   | { command: 'removeProjectSubtask'; id: string }
   | { command: 'addProjectLink'; projectId: string; label: string; url: string }
-  | { command: 'removeProjectLink'; id: string };
+  | { command: 'removeProjectLink'; id: string }
+  | { command: 'addProjectEvidence'; projectId: string; label: string; dataUrl: string }
+  | { command: 'removeProjectEvidence'; id: string }
+  | { command: 'downloadEvidence'; dataUrl: string; label: string };

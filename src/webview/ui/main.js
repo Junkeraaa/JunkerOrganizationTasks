@@ -2,10 +2,12 @@
 /// <reference lib="dom" />
 
 /**
- * JK Organization Tasks — Frontend Logic
+ * JK Organization Tasks — Frontend Logic (v3 — Categories)
  *
  * @typedef {'pending' | 'done'} TaskStatus
- * @typedef {{ id: string; title: string; status: TaskStatus; createdAt: string }} Task
+ * @typedef {'daily' | 'project' | 'custom'} CategoryType
+ * @typedef {{ id: string; title: string; status: TaskStatus; createdAt: string; categoryId: string }} Task
+ * @typedef {{ id: string; name: string; type: CategoryType; createdAt: string }} TaskCategory
  * @typedef {{ date: string; tasks: Task[]; notes?: string; closedAt: string }} DayRecord
  * @typedef {{ date: string; tasks: Task[] }} BacklogEntry
  * @typedef {{ id: string; label: string; url: string }} ProjectLink
@@ -22,11 +24,13 @@
   const addTaskBtn = /** @type {HTMLButtonElement} */ (document.getElementById('add-task-btn'));
   const addTaskForm = /** @type {HTMLElement} */ (document.getElementById('add-task-form'));
   const newTaskInput = /** @type {HTMLInputElement} */ (document.getElementById('new-task-input'));
+  const newTaskCategory = /** @type {HTMLSelectElement} */ (document.getElementById('new-task-category'));
   const confirmAddBtn = /** @type {HTMLButtonElement} */ (document.getElementById('confirm-add-btn'));
   const cancelAddBtn = /** @type {HTMLButtonElement} */ (document.getElementById('cancel-add-btn'));
-  const taskListEl = /** @type {HTMLUListElement} */ (document.getElementById('task-list'));
+  const categoriesContainer = /** @type {HTMLElement} */ (document.getElementById('categories-container'));
   const emptyStateEl = /** @type {HTMLElement} */ (document.getElementById('empty-state'));
   const closeDayBtn = /** @type {HTMLButtonElement} */ (document.getElementById('close-day-btn'));
+  const closeLastBizDayBtn = /** @type {HTMLButtonElement} */ (document.getElementById('close-last-business-day-btn'));
   const progressFill = /** @type {HTMLElement} */ (document.getElementById('progress-fill'));
   const progressLabel = /** @type {HTMLElement} */ (document.getElementById('progress-label'));
   const notesTextarea = /** @type {HTMLTextAreaElement} */ (document.getElementById('notes-textarea'));
@@ -36,6 +40,13 @@
   const historyListEl = /** @type {HTMLElement} */ (document.getElementById('history-list'));
   const historyEmptyEl = /** @type {HTMLElement} */ (document.getElementById('history-empty-state'));
   const toastEl = /** @type {HTMLElement} */ (document.getElementById('toast'));
+
+  // Category form DOM
+  const addCategoryBtn = /** @type {HTMLButtonElement} */ (document.getElementById('add-category-btn'));
+  const addCategoryForm = /** @type {HTMLElement} */ (document.getElementById('add-category-form'));
+  const newCategoryInput = /** @type {HTMLInputElement} */ (document.getElementById('new-category-input'));
+  const confirmCategoryBtn = /** @type {HTMLButtonElement} */ (document.getElementById('confirm-category-btn'));
+  const cancelCategoryBtn = /** @type {HTMLButtonElement} */ (document.getElementById('cancel-category-btn'));
 
   // Projects DOM
   const addProjectBtn = /** @type {HTMLButtonElement} */ (document.getElementById('add-project-btn'));
@@ -64,8 +75,15 @@
   const completeProjectBtn = /** @type {HTMLButtonElement} */ (document.getElementById('complete-project-btn'));
   const deleteProjectBtn = /** @type {HTMLButtonElement} */ (document.getElementById('delete-project-btn'));
 
+  // Evidence DOM
+  const evidenceDropzone = /** @type {HTMLElement} */ (document.getElementById('evidence-dropzone'));
+  const evidenceFileInput = /** @type {HTMLInputElement} */ (document.getElementById('evidence-file-input'));
+  const evidenceGallery = /** @type {HTMLElement} */ (document.getElementById('evidence-gallery'));
+
   /** @type {Task[]} */
   let currentTasks = [];
+  /** @type {TaskCategory[]} */
+  let currentCategories = [];
   /** @type {DayRecord[]} */
   let currentHistory = [];
   /** @type {BacklogEntry[]} */
@@ -74,6 +92,8 @@
   let currentProjects = [];
   /** @type {string|null} */
   let openProjectId = null;
+  /** @type {Set<string>} Track collapsed category ids */
+  const collapsedCategories = new Set();
 
   // ── Tab switching ────────────────────────────────────────────────────────────
   document.querySelectorAll('.tab').forEach((tab) => {
@@ -89,7 +109,6 @@
       tab.classList.add('tab--active');
       tab.setAttribute('aria-selected', 'true');
 
-      // If switching to projects tab, show list (not detail) unless a project is open
       if (target === 'projects') {
         if (openProjectId) {
           detailPanel.classList.add('panel--active');
@@ -108,8 +127,10 @@
   // ── Add task form ────────────────────────────────────────────────────────────
   addTaskBtn.addEventListener('click', () => {
     addTaskForm.classList.remove('hidden');
+    addCategoryForm.classList.add('hidden');
     newTaskInput.focus();
     addTaskBtn.classList.add('hidden');
+    populateCategorySelect(newTaskCategory, 'daily');
   });
 
   cancelAddBtn.addEventListener('click', closeAddForm);
@@ -129,8 +150,50 @@
   function submitNewTask() {
     const title = newTaskInput.value.trim();
     if (!title) { newTaskInput.focus(); return; }
-    vscode.postMessage({ command: 'addTask', title });
+    const categoryId = newTaskCategory.value || 'daily';
+    vscode.postMessage({ command: 'addTask', title, categoryId });
     closeAddForm();
+  }
+
+  // ── Add category form ────────────────────────────────────────────────────────
+  addCategoryBtn.addEventListener('click', () => {
+    addCategoryForm.classList.remove('hidden');
+    addTaskForm.classList.add('hidden');
+    addTaskBtn.classList.remove('hidden');
+    newCategoryInput.focus();
+  });
+
+  cancelCategoryBtn.addEventListener('click', closeCategoryForm);
+  confirmCategoryBtn.addEventListener('click', submitNewCategory);
+
+  newCategoryInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { submitNewCategory(); }
+    else if (e.key === 'Escape') { closeCategoryForm(); }
+  });
+
+  function closeCategoryForm() {
+    addCategoryForm.classList.add('hidden');
+    newCategoryInput.value = '';
+  }
+
+  function submitNewCategory() {
+    const name = newCategoryInput.value.trim();
+    if (!name) { newCategoryInput.focus(); return; }
+    vscode.postMessage({ command: 'addCategory', name });
+    closeCategoryForm();
+  }
+
+  // ── Category select helper ───────────────────────────────────────────────────
+  /** @param {HTMLSelectElement} select @param {string} selectedId */
+  function populateCategorySelect(select, selectedId) {
+    select.innerHTML = '';
+    currentCategories.forEach((cat) => {
+      const opt = document.createElement('option');
+      opt.value = cat.id;
+      opt.textContent = cat.name;
+      if (cat.id === selectedId) { opt.selected = true; }
+      select.appendChild(opt);
+    });
   }
 
   // ── Notes auto-save ──────────────────────────────────────────────────────────
@@ -149,19 +212,28 @@
 
   // ── Close day ────────────────────────────────────────────────────────────────
   closeDayBtn.addEventListener('click', () => {
-    if (currentTasks.length === 0) {
+    const dailyTasks = currentTasks.filter((t) => t.categoryId === 'daily');
+    if (dailyTasks.length === 0 && currentTasks.length === 0) {
       showToast('⚠️ Não há tarefas para encerrar o dia.');
       return;
     }
     vscode.postMessage({ command: 'closeDay' });
   });
 
-  // ── Render tasks ─────────────────────────────────────────────────────────────
-  /** @param {Task[]} tasks */
-  function renderTasks(tasks) {
-    taskListEl.innerHTML = '';
+  closeLastBizDayBtn.addEventListener('click', () => {
+    if (currentTasks.length === 0) {
+      showToast('⚠️ Não há tarefas para encerrar o dia.');
+      return;
+    }
+    vscode.postMessage({ command: 'closeDayLastBusinessDay' });
+  });
 
-    if (tasks.length === 0) {
+  // ── Render tasks with categories ─────────────────────────────────────────────
+  /** @param {Task[]} tasks @param {TaskCategory[]} categories */
+  function renderTasksPage(tasks, categories) {
+    categoriesContainer.innerHTML = '';
+
+    if (tasks.length === 0 && categories.length <= 1) {
       emptyStateEl.classList.remove('hidden');
       closeDayBtn.disabled = true;
       updateProgress(0, 0);
@@ -171,58 +243,237 @@
     emptyStateEl.classList.add('hidden');
     closeDayBtn.disabled = false;
 
-    const done = tasks.filter((t) => t.status === 'done').length;
-    updateProgress(done, tasks.length);
+    // Progress: only daily tasks
+    const dailyTasks = tasks.filter((t) => t.categoryId === 'daily');
+    const dailyDone = dailyTasks.filter((t) => t.status === 'done').length;
+    updateProgress(dailyDone, dailyTasks.length);
 
-    tasks.forEach((task) => {
-      const li = document.createElement('li');
-      li.className = 'task-item' + (task.status === 'done' ? ' task-item--done' : '');
-      li.dataset.id = task.id;
-
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.className = 'task-checkbox';
-      checkbox.checked = task.status === 'done';
-      checkbox.setAttribute('aria-label', 'Marcar tarefa como concluída');
-      checkbox.addEventListener('change', () => {
-        vscode.postMessage({ command: 'toggleTask', id: task.id });
-      });
-
-      const titleEl = document.createElement('span');
-      titleEl.className = 'task-title';
-      titleEl.textContent = task.title;
-
-      const timeEl = document.createElement('span');
-      timeEl.className = 'task-meta';
-      timeEl.textContent = formatTime(task.createdAt);
-
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'btn btn--icon';
-      removeBtn.title = 'Remover tarefa';
-      removeBtn.innerHTML = '✕';
-      removeBtn.setAttribute('aria-label', 'Remover tarefa');
-      removeBtn.addEventListener('click', () => {
-        vscode.postMessage({ command: 'removeTask', id: task.id });
-      });
-
-      li.appendChild(checkbox);
-      li.appendChild(titleEl);
-      li.appendChild(timeEl);
-      li.appendChild(removeBtn);
-      taskListEl.appendChild(li);
+    categories.forEach((cat) => {
+      const catTasks = tasks.filter((t) => t.categoryId === cat.id);
+      const section = buildCategorySection(cat, catTasks, categories);
+      categoriesContainer.appendChild(section);
     });
+  }
+
+  /**
+   * @param {TaskCategory} category
+   * @param {Task[]} tasks
+   * @param {TaskCategory[]} allCategories
+   * @returns {HTMLElement}
+   */
+  function buildCategorySection(category, tasks, allCategories) {
+    const section = document.createElement('div');
+    section.className = 'category-section';
+    if (collapsedCategories.has(category.id)) {
+      section.classList.add('category-section--collapsed');
+    }
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'category-header';
+    header.setAttribute('role', 'button');
+    header.setAttribute('tabindex', '0');
+
+    const chevron = document.createElement('span');
+    chevron.className = 'category-chevron';
+    chevron.textContent = '▼';
+
+    const icon = document.createElement('span');
+    icon.className = 'category-icon';
+    if (category.type === 'daily') { icon.textContent = '📌'; }
+    else if (category.type === 'project') { icon.textContent = '📂'; }
+    else { icon.textContent = '📁'; }
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'category-name';
+    nameEl.textContent = category.name;
+
+    const countEl = document.createElement('span');
+    countEl.className = 'category-count';
+    const doneTasks = tasks.filter((t) => t.status === 'done').length;
+    countEl.textContent = doneTasks + '/' + tasks.length;
+
+    const headerActions = document.createElement('div');
+    headerActions.className = 'category-header-actions';
+
+    // Inline add button
+    const inlineAddBtn = document.createElement('button');
+    inlineAddBtn.className = 'btn btn--icon category-inline-add';
+    inlineAddBtn.title = 'Adicionar tarefa';
+    inlineAddBtn.textContent = '+';
+    inlineAddBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Make sure the section is expanded
+      section.classList.remove('category-section--collapsed');
+      collapsedCategories.delete(category.id);
+      const form = section.querySelector('.category-inline-form');
+      if (form) {
+        form.classList.toggle('hidden');
+        const input = /** @type {HTMLInputElement|null} */ (form.querySelector('.category-inline-input'));
+        if (input) { input.focus(); }
+      }
+    });
+    headerActions.appendChild(inlineAddBtn);
+
+    // Delete button for custom categories
+    if (category.type === 'custom') {
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn btn--icon';
+      delBtn.title = 'Remover categoria';
+      delBtn.innerHTML = '✕';
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        vscode.postMessage({ command: 'removeCategory', id: category.id });
+      });
+      headerActions.appendChild(delBtn);
+    }
+
+    header.appendChild(chevron);
+    header.appendChild(icon);
+    header.appendChild(nameEl);
+    header.appendChild(countEl);
+    header.appendChild(headerActions);
+
+    // Toggle collapse
+    header.addEventListener('click', () => {
+      const isCollapsed = section.classList.toggle('category-section--collapsed');
+      if (isCollapsed) { collapsedCategories.add(category.id); }
+      else { collapsedCategories.delete(category.id); }
+    });
+    header.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); header.click(); }
+    });
+
+    // Body
+    const body = document.createElement('div');
+    body.className = 'category-body';
+
+    // Inline add form
+    const inlineForm = document.createElement('div');
+    inlineForm.className = 'category-inline-form hidden';
+
+    const inlineRow = document.createElement('div');
+    inlineRow.className = 'input-row';
+
+    const inlineInput = document.createElement('input');
+    inlineInput.type = 'text';
+    inlineInput.className = 'task-input category-inline-input';
+    inlineInput.placeholder = 'Nova tarefa...';
+    inlineInput.maxLength = 200;
+    inlineInput.autocomplete = 'off';
+
+    const inlineConfirm = document.createElement('button');
+    inlineConfirm.className = 'btn btn--confirm btn--small';
+    inlineConfirm.textContent = 'Adicionar';
+
+    function submitInline() {
+      const title = inlineInput.value.trim();
+      if (!title) { inlineInput.focus(); return; }
+      vscode.postMessage({ command: 'addTask', title, categoryId: category.id });
+      inlineInput.value = '';
+      inlineInput.focus();
+    }
+
+    inlineConfirm.addEventListener('click', submitInline);
+    inlineInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { submitInline(); }
+      else if (e.key === 'Escape') { inlineForm.classList.add('hidden'); }
+    });
+
+    inlineRow.appendChild(inlineInput);
+    inlineRow.appendChild(inlineConfirm);
+    inlineForm.appendChild(inlineRow);
+    body.appendChild(inlineForm);
+
+    // Task items
+    if (tasks.length === 0) {
+      const emptyMsg = document.createElement('div');
+      emptyMsg.className = 'category-empty';
+      emptyMsg.textContent = 'Sem tarefas nesta categoria';
+      body.appendChild(emptyMsg);
+    } else {
+      const ul = document.createElement('ul');
+      ul.className = 'task-list';
+      tasks.forEach((task) => {
+        ul.appendChild(buildTaskItem(task, allCategories));
+      });
+      body.appendChild(ul);
+    }
+
+    section.appendChild(header);
+    section.appendChild(body);
+    return section;
+  }
+
+  /**
+   * @param {Task} task
+   * @param {TaskCategory[]} allCategories
+   * @returns {HTMLLIElement}
+   */
+  function buildTaskItem(task, allCategories) {
+    const li = document.createElement('li');
+    li.className = 'task-item' + (task.status === 'done' ? ' task-item--done' : '');
+    li.dataset.id = task.id;
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'task-checkbox';
+    checkbox.checked = task.status === 'done';
+    checkbox.setAttribute('aria-label', 'Marcar tarefa como concluída');
+    checkbox.addEventListener('change', () => {
+      vscode.postMessage({ command: 'toggleTask', id: task.id });
+    });
+
+    const titleEl = document.createElement('span');
+    titleEl.className = 'task-title';
+    titleEl.textContent = task.title;
+
+    const timeEl = document.createElement('span');
+    timeEl.className = 'task-meta';
+    timeEl.textContent = formatTime(task.createdAt);
+
+    // Move dropdown
+    const moveSelect = document.createElement('select');
+    moveSelect.className = 'task-move-select';
+    moveSelect.title = 'Mover para outra categoria';
+    allCategories.forEach((cat) => {
+      const opt = document.createElement('option');
+      opt.value = cat.id;
+      opt.textContent = cat.name;
+      if (cat.id === task.categoryId) { opt.selected = true; }
+      moveSelect.appendChild(opt);
+    });
+    moveSelect.addEventListener('change', () => {
+      vscode.postMessage({ command: 'moveTask', id: task.id, categoryId: moveSelect.value });
+    });
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn btn--icon';
+    removeBtn.title = 'Remover tarefa';
+    removeBtn.innerHTML = '✕';
+    removeBtn.setAttribute('aria-label', 'Remover tarefa');
+    removeBtn.addEventListener('click', () => {
+      vscode.postMessage({ command: 'removeTask', id: task.id });
+    });
+
+    li.appendChild(checkbox);
+    li.appendChild(titleEl);
+    li.appendChild(timeEl);
+    li.appendChild(moveSelect);
+    li.appendChild(removeBtn);
+    return li;
   }
 
   /** @param {number} done @param {number} total */
   function updateProgress(done, total) {
     if (total === 0) {
-      progressLabel.textContent = '';
+      progressLabel.textContent = 'Tarefas Diárias: nenhuma tarefa';
       progressFill.style.width = '0%';
       return;
     }
     const pct = Math.round((done / total) * 100);
     progressFill.style.width = pct + '%';
-    progressLabel.textContent = done + ' de ' + total + ' tarefa' + (total !== 1 ? 's' : '') + ' concluída' + (done !== 1 ? 's' : '') + ' (' + pct + '%)';
+    progressLabel.textContent = 'Tarefas Diárias: ' + done + ' de ' + total + ' concluída' + (done !== 1 ? 's' : '') + ' (' + pct + '%)';
   }
 
   // ── Render backlog ───────────────────────────────────────────────────────────
@@ -276,9 +527,9 @@
         const item = document.createElement('div');
         item.className = 'history-task-item backlog-task-item';
 
-        const icon = document.createElement('span');
-        icon.className = 'status-icon';
-        icon.textContent = '⏳';
+        const iconEl = document.createElement('span');
+        iconEl.className = 'status-icon';
+        iconEl.textContent = '⏳';
 
         const titleEl = document.createElement('span');
         titleEl.className = 'history-task-title';
@@ -306,7 +557,7 @@
         actions.appendChild(completeBtn);
         actions.appendChild(removeBtn);
 
-        item.appendChild(icon);
+        item.appendChild(iconEl);
         item.appendChild(titleEl);
         item.appendChild(actions);
         tasksContainer.appendChild(item);
@@ -518,11 +769,13 @@
         meta.appendChild(sprintBadge);
       }
 
-      const subtasksDone = project.subtasks.filter((s) => s.status === 'done').length;
-      if (project.subtasks.length > 0) {
+      // Subtasks count from the unified task list
+      const projectTasks = currentTasks.filter((t) => t.categoryId === project.id);
+      const subtasksDone = projectTasks.filter((s) => s.status === 'done').length;
+      if (projectTasks.length > 0) {
         const progress = document.createElement('span');
         progress.className = 'project-card-progress';
-        progress.textContent = subtasksDone + '/' + project.subtasks.length + ' subtarefas';
+        progress.textContent = subtasksDone + '/' + projectTasks.length + ' subtarefas';
         meta.appendChild(progress);
       }
 
@@ -570,9 +823,10 @@
       completeProjectBtn.className = 'btn btn--complete';
     }
 
-    // Subtasks
+    // Subtasks from the unified task list
+    const projectTasks = currentTasks.filter((t) => t.categoryId === project.id);
     subtaskList.innerHTML = '';
-    project.subtasks.forEach((task) => {
+    projectTasks.forEach((task) => {
       const li = document.createElement('li');
       li.className = 'task-item' + (task.status === 'done' ? ' task-item--done' : '');
 
@@ -615,7 +869,6 @@
       anchor.href = '#';
       anchor.addEventListener('click', (e) => {
         e.preventDefault();
-        // Can't open URLs from webview directly; copy to clipboard
         navigator.clipboard.writeText(link.url).then(() => {
           showToast('🔗 Link copiado: ' + link.url);
         });
@@ -633,7 +886,148 @@
       li.appendChild(removeBtn);
       linkList.appendChild(li);
     });
+
+    // Evidences
+    evidenceGallery.innerHTML = '';
+    const evidences = project.evidences || [];
+    evidences.forEach((ev) => {
+      const card = document.createElement('div');
+      card.className = 'evidence-card';
+
+      const img = document.createElement('img');
+      img.className = 'evidence-thumb';
+      img.src = ev.dataUrl;
+      img.alt = ev.label;
+      img.title = ev.label;
+      img.addEventListener('click', () => {
+        // Open image in a modal-like overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'evidence-overlay';
+        const fullImg = document.createElement('img');
+        fullImg.className = 'evidence-full';
+        fullImg.src = ev.dataUrl;
+        fullImg.alt = ev.label;
+        overlay.appendChild(fullImg);
+        overlay.addEventListener('click', () => overlay.remove());
+        document.body.appendChild(overlay);
+      });
+
+      const info = document.createElement('div');
+      info.className = 'evidence-info';
+
+      const labelEl = document.createElement('span');
+      labelEl.className = 'evidence-label';
+      labelEl.textContent = ev.label;
+
+      const actions = document.createElement('div');
+      actions.className = 'evidence-actions';
+
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'btn btn--icon evidence-action-btn';
+      copyBtn.title = 'Copiar imagem';
+      copyBtn.textContent = '📋';
+      copyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        try {
+          const blob = dataUrlToBlob(ev.dataUrl);
+          navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
+            .then(() => showToast('📋 Imagem copiada!'))
+            .catch(() => {
+              navigator.clipboard.writeText(ev.dataUrl)
+                .then(() => showToast('📋 Dados da imagem copiados!'))
+                .catch(() => showToast('❌ Erro ao copiar.'));
+            });
+        } catch (_err) {
+          showToast('❌ Erro ao copiar imagem.');
+        }
+      });
+
+      const downloadBtn = document.createElement('button');
+      downloadBtn.className = 'btn btn--icon evidence-action-btn';
+      downloadBtn.title = 'Baixar imagem';
+      downloadBtn.textContent = '⬇️';
+      downloadBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        vscode.postMessage({ command: 'downloadEvidence', dataUrl: ev.dataUrl, label: ev.label });
+      });
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'btn btn--icon evidence-action-btn';
+      removeBtn.title = 'Remover evidência';
+      removeBtn.textContent = '✕';
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        vscode.postMessage({ command: 'removeProjectEvidence', id: ev.id });
+      });
+
+      actions.appendChild(copyBtn);
+      actions.appendChild(downloadBtn);
+      actions.appendChild(removeBtn);
+
+      info.appendChild(labelEl);
+      info.appendChild(actions);
+
+      card.appendChild(img);
+      card.appendChild(info);
+      evidenceGallery.appendChild(card);
+    });
   }
+
+  // ── Evidence: paste & upload ──────────────────────────────────────────────────
+  /** @param {File} file */
+  function uploadEvidenceFile(file) {
+    if (!file.type.startsWith('image/')) {
+      showToast('⚠️ Apenas imagens são permitidas.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('⚠️ Imagem muito grande (máx 5 MB).');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (!openProjectId || typeof reader.result !== 'string') { return; }
+      const label = file.name || 'Evidência';
+      vscode.postMessage({ command: 'addProjectEvidence', projectId: openProjectId, label, dataUrl: reader.result });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  evidenceDropzone.addEventListener('paste', (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) { return; }
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        e.preventDefault();
+        const file = items[i].getAsFile();
+        if (file) { uploadEvidenceFile(file); }
+        return;
+      }
+    }
+  });
+
+  // Also listen for paste on the whole detail panel so Ctrl+V works anywhere in the detail view
+  detailPanel.addEventListener('paste', (e) => {
+    // Only handle if we're in an open project and not pasting into a text field
+    const target = /** @type {HTMLElement} */ (e.target);
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') { return; }
+    const items = e.clipboardData?.items;
+    if (!items || !openProjectId) { return; }
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        e.preventDefault();
+        const file = items[i].getAsFile();
+        if (file) { uploadEvidenceFile(file); }
+        return;
+      }
+    }
+  });
+
+  evidenceFileInput.addEventListener('change', () => {
+    const file = evidenceFileInput.files?.[0];
+    if (file) { uploadEvidenceFile(file); }
+    evidenceFileInput.value = '';
+  });
 
   // Detail: Back
   detailBackBtn.addEventListener('click', () => {
@@ -726,6 +1120,17 @@
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
+  /** @param {string} dataUrl @returns {Blob} */
+  function dataUrlToBlob(dataUrl) {
+    const parts = dataUrl.split(',');
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+    const binary = atob(parts[1]);
+    const arr = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) { arr[i] = binary.charCodeAt(i); }
+    return new Blob([arr], { type: mime });
+  }
+
   /** @param {string} iso @returns {string} */
   function formatTime(iso) {
     try { return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
@@ -755,10 +1160,11 @@
     switch (message.command) {
       case 'setState': {
         currentTasks = message.tasks ?? [];
+        currentCategories = message.categories ?? [];
         currentHistory = message.history ?? [];
         currentBacklog = message.backlog ?? [];
         currentProjects = message.projects ?? [];
-        renderTasks(currentTasks);
+        renderTasksPage(currentTasks, currentCategories);
         renderBacklog(currentBacklog);
         renderHistory(currentHistory);
         renderProjects(currentProjects);
@@ -769,7 +1175,15 @@
         break;
       }
       case 'dayClosedSuccess': {
-        showToast('🌙 Dia encerrado com sucesso! Histórico salvo.');
+        if (message.date) {
+          showToast('📅 Dia encerrado como ' + formatDate(message.date) + '! Histórico salvo.');
+        } else {
+          showToast('🌙 Dia encerrado com sucesso! Histórico salvo.');
+        }
+        break;
+      }
+      case 'evidenceDownloaded': {
+        showToast('⬇️ Imagem salva com sucesso!');
         break;
       }
       case 'error': {

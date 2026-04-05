@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource}; script-src 'nonce-${cspNonce}';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource}; script-src 'nonce-${cspNonce}'; img-src ${cspSource} data: blob:;" />
   <title>JK Organization Tasks</title>
   <link rel="stylesheet" href="${styleUri}" />
 </head>
@@ -17,7 +17,7 @@
       </div>
       <nav class="tabs" role="tablist">
         <button class="tab tab--active" role="tab" aria-selected="true" data-tab="today" id="tab-today">
-          Tarefas do Dia
+          Tarefas
         </button>
         <button class="tab" role="tab" aria-selected="false" data-tab="backlog" id="tab-backlog">
           Pendentes
@@ -31,13 +31,18 @@
       </nav>
     </header>
 
-    <!-- Tarefas do Dia -->
+    <!-- Tarefas (with categories) -->
     <section class="panel panel--active" id="panel-today" role="tabpanel" aria-labelledby="tab-today">
       <div class="section-header">
         <div class="date-display" id="today-date"></div>
-        <button class="btn btn--primary" id="add-task-btn" title="Adicionar nova tarefa">
-          <span>+</span> Adicionar Tarefa
-        </button>
+        <div class="section-actions">
+          <button class="btn btn--primary" id="add-task-btn" title="Adicionar nova tarefa">
+            <span>+</span> Adicionar Tarefa
+          </button>
+          <button class="btn btn--ghost" id="add-category-btn" title="Nova categoria">
+            <span>+</span> Nova Categoria
+          </button>
+        </div>
       </div>
 
       <!-- Inline task input -->
@@ -51,15 +56,31 @@
             maxlength="200"
             autocomplete="off"
           />
+          <select class="category-select" id="new-task-category" title="Categoria">
+          </select>
           <button class="btn btn--confirm" id="confirm-add-btn">Adicionar</button>
           <button class="btn btn--ghost" id="cancel-add-btn">Cancelar</button>
         </div>
       </div>
 
-      <!-- Task list -->
-      <ul class="task-list" id="task-list" aria-label="Lista de tarefas do dia">
-        <!-- Tasks rendered by JS -->
-      </ul>
+      <!-- Inline category input -->
+      <div class="add-task-form hidden" id="add-category-form">
+        <div class="input-row">
+          <input
+            type="text"
+            class="task-input"
+            id="new-category-input"
+            placeholder="Nome da categoria..."
+            maxlength="100"
+            autocomplete="off"
+          />
+          <button class="btn btn--confirm" id="confirm-category-btn">Criar</button>
+          <button class="btn btn--ghost" id="cancel-category-btn">Cancelar</button>
+        </div>
+      </div>
+
+      <!-- Categories + tasks rendered by JS -->
+      <div class="categories-container" id="categories-container"></div>
 
       <div class="empty-state hidden" id="empty-state">
         <span class="empty-icon">📋</span>
@@ -87,9 +108,14 @@
             <div class="progress-fill" id="progress-fill"></div>
           </div>
         </div>
-        <button class="btn btn--close-day" id="close-day-btn">
-          Encerrar Dia 🌙
-        </button>
+        <div class="day-footer-actions">
+          <button class="btn btn--close-day" id="close-day-btn">
+            Encerrar Dia 🌙
+          </button>
+          <button class="btn btn--close-day-secondary" id="close-last-business-day-btn">
+            📅 Último Dia Útil
+          </button>
+        </div>
       </div>
     </section>
 
@@ -209,6 +235,17 @@
           </div>
         </div>
         <ul class="link-list" id="link-list"></ul>
+      </div>
+
+      <!-- Evidences -->
+      <div class="detail-section">
+        <label class="detail-label">📸 Evidências</label>
+        <div class="evidence-dropzone" id="evidence-dropzone" tabindex="0">
+          <span class="evidence-dropzone-text">Cole uma imagem (Ctrl+V) ou</span>
+          <label class="btn btn--confirm btn--small evidence-upload-label" for="evidence-file-input">Selecionar Arquivo</label>
+          <input type="file" id="evidence-file-input" accept="image/*" class="hidden" />
+        </div>
+        <div class="evidence-gallery" id="evidence-gallery"></div>
       </div>
 
       <!-- Complete / Delete -->
