@@ -5,6 +5,16 @@ export interface Task {
   title: string;
   status: TaskStatus;
   createdAt: string; // ISO string
+  categoryId: string; // 'daily' | projectId | custom category id
+}
+
+export type CategoryType = 'daily' | 'project' | 'custom';
+
+export interface TaskCategory {
+  id: string;
+  name: string;
+  type: CategoryType;
+  createdAt: string; // ISO string
 }
 
 export interface DayRecord {
@@ -25,6 +35,13 @@ export interface ProjectLink {
   url: string;
 }
 
+export interface ProjectEvidence {
+  id: string;
+  label: string;
+  dataUrl: string;  // base64 data URL (image/png, image/jpeg, etc.)
+  createdAt: string; // ISO string
+}
+
 export type ProjectStatus = 'active' | 'done';
 
 export interface Project {
@@ -35,5 +52,6 @@ export interface Project {
   notes: string;
   subtasks: Task[];
   links: ProjectLink[];
+  evidences: ProjectEvidence[];
   createdAt: string;  // ISO string
 }

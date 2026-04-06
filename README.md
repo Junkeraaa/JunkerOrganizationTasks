@@ -1,50 +1,55 @@
 # JK Organization Tasks
 
-Extensão do VSCode para gerenciamento de tarefas. Adicione tarefas ao longo do dia, marque-as como concluídas e encerre o dia salvando tudo no histórico — sem sair do editor.
+Organizador de produtividade diária para desenvolvedores — gerencie suas tarefas, projetos, backlog e histórico de dias tudo dentro do VSCode, sem trocar de janela.
 
 ---
 
 ## ✨ Funcionalidades
 
-- **Tarefas do Dia** — adicione, conclua e remova tarefas rapidamente
-- **Barra lateral** — visualize as tarefas do dia na activity bar do VSCode
-- **Encerrar Dia 🌙** — salva o snapshot do dia no histórico e zera a lista ativa
-- **Histórico** — consulte dias anteriores com status de cada tarefa
-- **Persistência real** — dados salvos via `globalState` (não somem ao fechar o VSCode)
-- **Tema automático** — segue o tema dark/light do VSCode via variáveis CSS nativas
+### 📋 Tarefas com Categorias
+- Crie tarefas e organize em categorias (Tarefas Diárias, por projeto ou customizadas)
+- Mova tarefas entre categorias com um dropdown
+- Adicione tarefas inline dentro de cada categoria
+- Barra de progresso das tarefas diárias
+
+### 📁 Projetos
+- Crie projetos com subtarefas, sprint, anotações e links úteis
+- Anexe **evidências** (imagens) via Ctrl+V ou seleção de arquivo
+- Download e cópia de evidências com um clique
+- Status ativo / concluído por projeto
+
+### 🗂️ Backlog
+- Tarefas diárias pendentes ao encerrar o dia vão automaticamente para o backlog
+- Conclua ou descarte itens pendentes de dias anteriores
+
+### 📅 Encerrar Dia
+- **Encerrar Dia 🌙** — registra o histórico como hoje e limpa as tarefas diárias
+- **Encerrar Último Dia Útil 📅** — registra como o último dia útil (seg–sex), para quando você esquece de encerrar
+- Todas as tarefas concluídas de todas as categorias são salvas no histórico
+
+### 🗓️ Histórico
+- Consulte dias encerrados com status de cada tarefa e anotações
+
+### ⚙️ Outros
+- Atalho `Ctrl+Shift+J` / `Cmd+Shift+J` para abrir o painel
+- Interface que segue o tema dark/light do VSCode automaticamente
+- Persistência via `globalState` (dados não somem ao fechar o editor)
 
 ---
 
-Na nova janela aberta, use `Ctrl+Shift+P` → **JK Organization: Abrir Painel**.
+## 🚀 Como usar
 
----
-
-## 🏗️ Estrutura do projeto
-
-```
-src/
-├── extension.ts                ← ponto de entrada
-├── types/
-│   └── task.ts                 ← interfaces Task, DayRecord, TaskStatus
-├── services/
-│   └── storageService.ts       ← persistência via globalState
-├── providers/
-│   └── taskTreeProvider.ts     ← TreeView lateral
-└── webview/
-    ├── panelManager.ts         ← ciclo de vida do WebviewPanel
-    └── ui/
-        ├── index.html          ← HTML da interface
-        ├── style.css           ← estilos dark/light com variáveis VSCode
-        └── main.js             ← lógica frontend (postMessage API)
-```
+1. Instale a extensão
+2. Pressione `Ctrl+Shift+J` (ou `Cmd+Shift+J` no macOS) para abrir o painel
+3. Alternativamente: `Ctrl+Shift+P` → **JK Organization: Abrir Painel**
 
 ---
 
 ## 🛠️ Comandos disponíveis
 
-| Comando | Descrição |
-|---|---|
-| `JK Organization: Abrir Painel` | Abre o painel principal da extensão |
+| Comando | Atalho | Descrição |
+|---|---|---|
+| `JK Organization: Abrir Painel` | `Ctrl+Shift+J` | Abre o painel principal |
 
 ---
 

@@ -14,11 +14,11 @@ export function activate(context: vscode.ExtensionContext): void {
   // Register sidebar TreeView
   const treeView = vscode.window.createTreeView('jkOrganizationTasks', {
     treeDataProvider: treeProvider,
-    showCollapseAll: false,
+    showCollapseAll: true,
   });
 
   // Populate the tree with persisted tasks on activation
-  treeProvider.refresh(storage.getTasks());
+  treeProvider.refresh(storage.getTasks(), storage.buildCategoryList());
 
   // Register the open panel command
   const openPanelCommand = vscode.commands.registerCommand(
